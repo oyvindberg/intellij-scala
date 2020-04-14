@@ -251,6 +251,15 @@ public interface ScalaTokenTypes {
             kMACRO // scala 2 only
     );
 
+    // Soft keywords are highlighted `ScalaColorSchemeAnnotator`
+    TokenSet SOFT_KEYWORDS = TokenSet.create(
+            As(),
+            Derives(),
+            EndKeyword(),
+            ExtensionKeyword(),
+            Opaque()
+    );
+
     TokenSet IDENTIFIER_TOKEN_SET = TokenSet.create(tIDENTIFIER);
 
     TokenSet STRING_LITERAL_TOKEN_SET = TokenSet.create(
