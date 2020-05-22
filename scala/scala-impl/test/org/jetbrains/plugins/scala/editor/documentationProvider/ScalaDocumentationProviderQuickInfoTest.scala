@@ -264,4 +264,8 @@ class ScalaDocumentationProviderQuickInfoTest extends ScalaDocumentationProvider
         "[<a href=\"psi_element://scala.Int\"><code>Int</code></a> :::" +
         " <a href=\"psi_element://scala.Predef.String\"><code>String</code></a>]"
     )
+
+  def testWIP_FAILING_TEST(): Unit = {
+    org.junit.Assert.fail("WIP commit")
+  }
 }
