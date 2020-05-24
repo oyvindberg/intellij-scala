@@ -334,7 +334,8 @@ object ScalaSmartCompletionContributor {
     identifierWithParentsPattern(classOf[ScReferenceExpression], clazz) ||
       identifierWithParentsPattern(classOf[ScReferenceExpression], classOf[ScReferenceExpression], clazz)
 
-  private def acceptTypes(typez: Seq[ScType], variants: Array[Object],
+  private def acceptTypes(_typez: Seq[ScType],
+                          variants: Array[Object],
                           result: CompletionResultSet,
                           scope: GlobalSearchScope,
                           secondCompletion: Boolean,
@@ -342,6 +343,8 @@ object ScalaSmartCompletionContributor {
                           originalPlace: PsiElement)
                          (implicit place: PsiElement): Unit = {
     implicit val project: Project = place.getProject
+
+    val typez: Seq[ScType] = expandScalaJsUnions(_typez)
 
     if (typez.isEmpty || typez.forall(_ == Nothing)) return
 
@@ -547,6 +550,43 @@ object ScalaSmartCompletionContributor {
         }
       case _ => variants.foreach(applyVariant(_, checkForSecondCompletion = true))
     }
+  }
+
+  /**
+    * By splitting the base input `typez` on the Scala.js faux type unions,
+    * smart search starts working by comparing possible completion values to any of the possible types
+    */
+  private def expandScalaJsUnions(typez: Seq[ScType]): Seq[ScType] = {
+    def go(original: ScType): Seq[ScType] =
+      original match {
+        case ScProjectionType(_, x: ScTypeAliasDefinition) =>
+          // follow type aliases
+          x.aliasedType match {
+            case Right(tpe) => go(tpe)
+            case Left(_) => List(original)
+          }
+
+        case pt@ParameterizedType(designator, args)  =>
+          // follow type applied type aliases
+          pt.aliasType match {
+            case Some(alias) =>
+              (alias.lower, alias.upper) match {
+                case (Right(lower), _) => go(lower)
+                case (_, Right(upper)) => go(upper)
+                case _ => List(original)
+              }
+            case None =>
+              designator.extractClass match {
+                case Some(clazz) if clazz.qualifiedName == "scala.scalajs.js.|" && args.length == 2 =>
+                  args.flatMap(go)
+                case _ => List(original)
+              }
+          }
+
+        case _ => List(original)
+      }
+
+    typez.flatMap(go)
   }
 
   private[this] def isAccessible(item: ScalaLookupItem)
